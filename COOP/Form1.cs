@@ -576,7 +576,7 @@ namespace COOP
         private void Form1_Shown(object sender, EventArgs e)
         {
 
-            if (MessageBox.Show("Would you like me to try to auto download the spreadsheet?", "AutoDownload?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            if (MessageBox.Show("Would you like me to auto download the spreadsheet?", "AutoDownload?", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 try
                 {
@@ -634,6 +634,11 @@ namespace COOP
                     var fileId = "1Ee1ZlTeGl3-9hWYr9FMRxB_Ya4Of-njJN_xnnkgmDcM";
                     var request = service.Files.Export(fileId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
                     var stream2 = new System.IO.MemoryStream();
+                    request.MediaDownloader.ChunkSize = 10;
+
+
+                    bool download_good = true;
+
                     // Add a handler which will be notified on progress changes.
                     // It will notify on each chunk download and when the
                     // download is completed or failed.
@@ -655,6 +660,8 @@ namespace COOP
                                     case DownloadStatus.Failed:
                                         {
                                             Console.WriteLine("Download failed.");
+                                            download_good = false;
+                                            MessageBox.Show(progress.Exception.Message,"Error Downloading file",MessageBoxButtons.OK,MessageBoxIcon.Asterisk);
                                             break;
                                         }
                                 }
@@ -662,17 +669,23 @@ namespace COOP
                     request.Download(stream2);
 
                     System.IO.File.Delete(@"temp.xlsx");
-                    FileStream file2 = new FileStream("temp.xlsx", FileMode.Create, FileAccess.Write);
-                    stream2.WriteTo(file2);
-                    file2.Close();
-                    stream2.Close();
 
-                    tbFilePath.Text =  Application.StartupPath+ @"\temp.xlsx";
-                    ProcessFile();
+                    if (download_good)
+                    {
+                        FileStream file2 = new FileStream("temp.xlsx", FileMode.Create, FileAccess.Write);
+                        stream2.WriteTo(file2);
+                        file2.Close();
+                        stream2.Close();
+
+                        tbFilePath.Text = Application.StartupPath + @"\temp.xlsx";
+                        ProcessFile();
+                    }
+                    else
+                        MessageBox.Show("Well that didnt work. Download it yoursef.\nDownload/Export as an Excel Spreadsheet and drag it into this app.", "Error Downloading file", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 }
                 catch
                 {
-                    MessageBox.Show("Well that didnt work. Download it yoursef.");
+                    MessageBox.Show("Well that didnt work. Download it yoursef.", "Error Downloading file", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 }
                 finally
                 {
