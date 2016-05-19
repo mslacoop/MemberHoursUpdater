@@ -159,14 +159,15 @@ namespace COOP
 
             try
             {
+                MessageBox.Show("Connecting to the Backend, this might take some time.\n\nGive it a minute before you start double clicking all over the place.", "DB Connection", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 // Set cursor as hourglass
                 Cursor.Current = Cursors.WaitCursor;
                 // UNCOMMENT THIS WHEN YOU WANT TO TESt IN THE COOP
-                //   SQLCon.Open();
+                SQLCon.Open();
                 label4.Text = "DB Connection: GOOD";
                 //button1.Enabled = true;
             }
-            catch
+            catch(Exception e)
             {
                 // Set cursor back
                 Cursor.Current = Cursors.Default;
@@ -174,7 +175,17 @@ namespace COOP
                 button1.Enabled = false;
                 button2.Enabled = false;
                 this.AllowDrop = false;
-                MessageBox.Show("There was a problem connecting to the backend DB. \n\nYOU SHALL NOT PASS!!!\n\nDon't know what to tell ya....Jiggle the handle maybe?", "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                MessageBox.Show("There was a problem connecting to the backend DB. \n\nYOU SHALL NOT PASS!!!\n\nDon't know what to tell ya....Jiggle the handle maybe?" + Environment.NewLine + Environment.NewLine + e.Message, "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                if (System.Windows.Forms.Application.MessageLoop)
+                {
+                    // Use this since we are a WinForms app
+                    System.Windows.Forms.Application.Exit();
+                }
+                else
+                {
+                    // Use this since we are a console app
+                    System.Environment.Exit(1);
+                }
             }
             finally
             {
@@ -879,9 +890,9 @@ namespace COOP
                     else
                         MessageBox.Show("Well that didnt work. Download it yoursef.\nDownload/Export as an Excel Spreadsheet OR CVS and drag it into this app.", "Error Downloading file", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 }
-                catch
+                catch(Exception ex)
                 {
-                    MessageBox.Show("Well that didnt work. Download it yoursef.", "Error Downloading file", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+                    MessageBox.Show("Well that didnt work. Download it yoursef."+Environment.NewLine+ex.Message, "Error Downloading file", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 }
                 finally
                 {
