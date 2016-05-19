@@ -22,6 +22,9 @@ using Google.Apis.Drive.v3.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.Download;
+
+using LumenWorks.Framework.IO.Csv;
+
 namespace COOP
 {
     public partial class Form1 : Form
@@ -193,7 +196,15 @@ namespace COOP
             tbFilePath.Text = files[0];
             //coop.Default.FilePath = tbFilePath.Text;
             //coop.Default.Save();
-            ProcessFile();
+
+            if (Path.GetExtension(files[0]) == ".cvs")
+                ProcessFileCvs();
+            else if (Path.GetExtension(files[0]) == ".xlsx")
+                ProcessFileExcel();
+            else
+                MessageBox.Show("Unknow File Type. You can drop '.xlsx' or '.cvs' files here","Unknow File Extension",MessageBoxButtons.OK,MessageBoxIcon.Error);
+
+
         }
 
         //this will clean up all the open Interop bullshit that is Excel.
@@ -216,7 +227,7 @@ namespace COOP
         }
 
         //read in the excel spreadsheet and try to figure out what is what
-        private void ProcessFile()
+        private void ProcessFileExcel()
         {
             // Set cursor as hourglass
             Cursor.Current = Cursors.WaitCursor;
@@ -260,19 +271,20 @@ namespace COOP
                 {
 
                     string temp = System.Convert.ToString((xlRange.Cells[1, j] as Microsoft.Office.Interop.Excel.Range).Value2);
+                    temp = temp.ToLower();
                     if (temp != null)
                     {
-                        if (temp.CompareTo("First Name") == 0)
+                        if (temp.CompareTo("first name") == 0)
                             iFirstNameIndex = j;
-                        if (temp.CompareTo("OVERALL STATUS") == 0)
+                        if (temp.CompareTo("overall status") == 0)
                             iStatusIndex = j;
                         if (temp.CompareTo("0") == 0)
                             iLastNameIndex = j;
-                        if (temp.CompareTo("Last Name") == 0)
+                        if (temp.CompareTo("last name") == 0)
                             iLastNameIndex = j;
-                        if (temp.CompareTo("ID") == 0)
+                        if (temp.CompareTo("id") == 0)
                             iIDIndex = j;
-                        if (temp.CompareTo("Owner Number") == 0)
+                        if (temp.CompareTo("owner number") == 0)
                             iIDIndex = j;
                     }
                 }
@@ -381,17 +393,191 @@ namespace COOP
                     }
                 }//end forloop
                 CleanStateExit(xlApp, xlWorkbook, xlWorksheet, xlRange);
+                button1.Enabled = true;
             }
             catch (Exception e)
             {
                 Console.WriteLine("{0} Exception caught.", e);
+
+                if(e.Message.Contains("Class not registered"))
+                    MessageBox.Show("Well that didn't work. Do you have Excel installed?\nIn order for me to read an Excel Spreadsheet you need to have Excel installed.\nTry using downloading as a CVS instead.","Error Reading the File",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                else
+                    MessageBox.Show("{0} Exception caught." + Environment.NewLine + e.Message);
+
 
             }
             finally
             {
                 // Set cursor as default arrow
                 Cursor.Current = Cursors.Default;
+
+            }
+        }
+
+        //read in the excel spreadsheet and try to figure out what is what
+        private void ProcessFileCvs()
+        {
+            // Set cursor as hourglass
+            Cursor.Current = Cursors.WaitCursor;
+
+            //init some things before we go looking for the columns that hold our information
+            button1.Enabled = false;
+            iFirstNameIndex = -1;
+            iLastNameIndex = -1;
+            iStatusIndex = -1;
+            iIDIndex = -1;
+
+            lstBadList = new List<Member>();
+            lstGoodList = new List<Member>();
+            lbBadMembers.Items.Clear();
+            lbGoodMembers.Items.Clear();
+
+            label2.Text = "Members in Good Standing";
+            label3.Text = "Members NOT in Good Standing";
+
+
+            try
+            {
+                int colCount = 0;
+
+                // open the file "data.csv" which is a CSV file with headers
+                using (CsvReader csv =
+                       new CsvReader(new StreamReader(@tbFilePath.Text), true))
+                {
+                    colCount = csv.FieldCount;
+
+                    string[] headers = csv.GetFieldHeaders();
+                    //find out which columns how the info we are interested in. First and Last Name and the current status value
+                    for (int j = 0; j <= colCount-1; j++)
+                    {
+
+                        string tempheader = headers[j];
+                        tempheader = tempheader.ToLower();
+                        if (tempheader != null)
+                        {
+                            if (tempheader.CompareTo("first name") == 0)
+                                iFirstNameIndex = j;
+                            if (tempheader.CompareTo("overall status") == 0)
+                                iStatusIndex = j;
+                            if (tempheader.CompareTo("0") == 0)
+                                iLastNameIndex = j;
+                            if (tempheader.CompareTo("last name") == 0)
+                                iLastNameIndex = j;
+                            if (tempheader.CompareTo("id") == 0)
+                                iIDIndex = j;
+                            if (tempheader.CompareTo("owner number") == 0)
+                                iIDIndex = j;
+                        }
+                    }
+
+                    if (iLastNameIndex == -1)
+                    {
+                        MessageBox.Show("Looks like we have a problem.\nI could not find the column for Last Name in the spreadsheet.\nMake sure the spreadsheet has a column called 'Last Name' OR the last name column is called '0'", "Excel Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Cursor.Current = Cursors.Default;
+                        return;
+                    }
+                    if (iFirstNameIndex == -1)
+                    {
+                        MessageBox.Show("Looks like we have a problem.\nI could not find the column for First Name in the spreadsheet.\nMake sure the spreadsheet has a column called 'First Name'", "Excel Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Cursor.Current = Cursors.Default;
+                        return;
+                    }
+                    if (iStatusIndex == -1)
+                    {
+                        MessageBox.Show("Looks like we have a problem.\nI could not find the column for Overall Status in the spreadsheet.\nMake sure the spreadsheet has a column called 'OVERALL STATUS'", "Excel Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Cursor.Current = Cursors.Default;
+                        return;
+                    }
+
+                    if (iIDIndex == -1)
+                    {
+                        MessageBox.Show("Looks like we have a problem.\nI could not find the column for Member ID number in the spreadsheet.\nMake sure the spreadsheet has a column called 'Member ID' OR just 'ID'\nand it has each member's ID number in it.", "Excel Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Cursor.Current = Cursors.Default;
+                        return;
+                    }
+
+
+
+                    while (csv.ReadNextRecord())
+                    {
+                        double temp = 0;
+                        if (csv[iStatusIndex] != null)
+                        {
+                            double.TryParse(csv[iStatusIndex],out temp);
+                        }
+                        else
+                        {
+                            temp = -999;
+                        }
+                        //build the name
+                        string name = csv[iLastNameIndex] + ", " + csv[iFirstNameIndex];
+
+                        if (name.Length > 3)
+                        {
+                            Member m = new Member();
+
+                            m.sFirstName = csv[iFirstNameIndex];
+                            m.sLastName = csv[iLastNameIndex];
+
+                            if (csv[iIDIndex] != null)
+                            {
+                                if(csv[iIDIndex].Length>0)
+                                {
+                                    int y = 0;
+                                    if(Int32.TryParse(csv[iIDIndex],out y))
+                                    {
+                                        m.iID = y;
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("Owner Number is not set to a number.\n\n" + m.sLastName + "," + m.sFirstName);
+                                        m.iID = -1;
+                                    }
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Owner Number is not set to a number.\n\n" + m.sLastName + "," + m.sFirstName);
+                                    m.iID = -1;
+                                }
+                            }
+                            else
+                            {
+                                MessageBox.Show("Owner Number is not set to a number.\n\n" + m.sLastName + "," + m.sFirstName);
+                                m.iID = -1;
+                            }
+
+                            m.iHours = (int)temp;
+
+                            if (temp > -6)
+                            {
+                                lbGoodMembers.Items.Add(name);
+                                label2.Text = "Members in Good Standing (" + lbGoodMembers.Items.Count.ToString() + ")";
+
+                                lstGoodList.Add(m);
+
+                            }
+                            else
+                            {
+                                lbBadMembers.Items.Add(name);
+                                label3.Text = "Members NOT in Good Standing (" + lbBadMembers.Items.Count.ToString() + ")";
+                                lstBadList.Add(m);
+                            }
+                        }//end name length if
+                    }//end while
+                }//end of Using statement
                 button1.Enabled = true;
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("{0} Exception caught.", e);
+                MessageBox.Show("{0} Exception caught." + Environment.NewLine + e.Message);
+
+            }
+            finally
+            {
+                // Set cursor as default arrow
+                Cursor.Current = Cursors.Default;
 
             }
         }
@@ -421,7 +607,13 @@ namespace COOP
                 //coop.Default.FilePath = tbFilePath.Text;
                 //coop.Default.Save();
 
-                ProcessFile();
+                if (Path.GetExtension(openFileDialog1.FileName) == ".cvs")
+                    ProcessFileCvs();
+                else if (Path.GetExtension(openFileDialog1.FileName) == ".xlsx")
+                    ProcessFileExcel();
+                else
+                    MessageBox.Show("Unknow File Type. You can drop '.xlsx' or '.cvs' files here", "Unknow File Extension", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
             }
         }
 
@@ -632,7 +824,9 @@ namespace COOP
 
 
                     var fileId = "1Ee1ZlTeGl3-9hWYr9FMRxB_Ya4Of-njJN_xnnkgmDcM";
-                    var request = service.Files.Export(fileId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                    //var request = service.Files.Export(fileId, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                    var request = service.Files.Export(fileId, "text/csv");
+                    
                     var stream2 = new System.IO.MemoryStream();
                     request.MediaDownloader.ChunkSize = 10;
 
@@ -668,20 +862,22 @@ namespace COOP
                             };
                     request.Download(stream2);
 
-                    System.IO.File.Delete(@"temp.xlsx");
+                    System.IO.File.Delete(@"temp.cvs");
 
                     if (download_good)
                     {
-                        FileStream file2 = new FileStream("temp.xlsx", FileMode.Create, FileAccess.Write);
+                        FileStream file2 = new FileStream("temp.cvs", FileMode.Create, FileAccess.Write);
                         stream2.WriteTo(file2);
                         file2.Close();
                         stream2.Close();
 
-                        tbFilePath.Text = Application.StartupPath + @"\temp.xlsx";
-                        ProcessFile();
+                        tbFilePath.Text = Application.StartupPath + @"\temp.cvs";
+
+                        ProcessFileCvs();
+
                     }
                     else
-                        MessageBox.Show("Well that didnt work. Download it yoursef.\nDownload/Export as an Excel Spreadsheet and drag it into this app.", "Error Downloading file", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+                        MessageBox.Show("Well that didnt work. Download it yoursef.\nDownload/Export as an Excel Spreadsheet OR CVS and drag it into this app.", "Error Downloading file", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 }
                 catch
                 {
