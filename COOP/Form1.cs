@@ -660,7 +660,8 @@ namespace COOP
 
             //will have to push the hours worked (SSI) out to the db, AND change wmdiscount() in PrehKeys.php from .05 to .15 for staff = 6;
 
-
+            int count_good = 0;
+            int count_bad = 0;
             int errors = 0;
             //lets loop thru all the lists and mark good and bad members one at a time.....
             //this might take forever but it will be easier to recover from errors
@@ -668,9 +669,8 @@ namespace COOP
             {
                 if (m.iID > 0)
                 {
-
                     //we may  not need to update anything but SSI. I would still want to mark everyone on these lists as active and staff of 6 just to make sure
-                    string sql = "UPDATE members SET Active=1,isStaff=6,SSI="+m.iHours.ToString()+" WHERE CardNo= " + m.iID.ToString() + ";";
+                    string sql = "UPDATE members SET staff=6,SSI=" + m.iHours.ToString() + " WHERE CardNo= " + m.iID.ToString() + ";";
 
                     try
                     {
@@ -684,12 +684,15 @@ namespace COOP
 
                             if (rows > 1)
                             {
-                                //updated more then one row
+                                MessageBox.Show("Member number " + m.iID.ToString()+ " updated more then one person, \nplease check the attendence spreadsheet for errros.");
                             }
                             else if (rows < 1)
                             {
-                                //less then one row
+                                MessageBox.Show("Member  " + m.sFirstName + " " + m.sLastName + " was not updated, \nplease check the attendence spreadsheet for errros.");
                             }
+                            else if (rows == 1)
+                                count_good++;
+
 
 
                         }
@@ -705,6 +708,8 @@ namespace COOP
                         //SQLCon.Close();
                     }
                 }
+                else
+                    MessageBox.Show("Member ID for " + m.sFirstName + " " + m.sLastName + " looks like it isn't a number, \nplease check the attendence spreadsheet.");
 
             }
 
@@ -714,7 +719,7 @@ namespace COOP
                 {
                     //need to check but it looks like is4c checks 2 things for Working Member Discoount.....SSI (hours worked) and isStaff==6
                     //aslong as hours is updated IS$C will do all the work. I'm keeping this BadList update seperate for now just in case the SQL statement needs to change
-                    string sql = "UPDATE members SET Active=1,isStaff=6,SSI=" + m.iHours.ToString() + " WHERE CardNo= " + m.iID.ToString() + ";";
+                    string sql = "UPDATE members SET staff=6,SSI=" + m.iHours.ToString() + " WHERE CardNo= " + m.iID.ToString() + ";";
 
                     try
                     {
@@ -728,12 +733,14 @@ namespace COOP
 
                             if (rows > 1)
                             {
-                                //updated more then one row
+                                MessageBox.Show("Member number " + m.iID.ToString() + " updated more then one person, \nplease check the attendence spreadsheet for errros.");
                             }
                             else if (rows < 1)
                             {
-                                //updated more then one row
+                                MessageBox.Show("Member  " + m.sFirstName + " " + m.sLastName + " was not updated, \nplease check the attendence spreadsheet for errros.");
                             }
+                            else if (rows == 1)
+                                count_bad++;
 
 
                         }
@@ -750,11 +757,13 @@ namespace COOP
                     }
 
                 }
+                else
+                    MessageBox.Show("Member ID for " + m.sFirstName + " " + m.sLastName + " looks like it isn't a number, \nplease check the attendence spreadsheet.");
             }
-            if(errors==0)
-                MessageBox.Show("You have updated the Member DB");
+            if (errors==0)
+                MessageBox.Show("You have updated the Member DB\n"+count_good.ToString()+"--good\n"+count_bad.ToString()+"--not good");
             else
-                MessageBox.Show("You have updated the Member DB, but there were some errors");
+                MessageBox.Show("You have updated the Member DB with some errors.\n" + count_good.ToString() + "--good\n" + count_bad.ToString() + "--not good");
 
         }
 
