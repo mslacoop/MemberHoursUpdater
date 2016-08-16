@@ -175,16 +175,16 @@ namespace COOP
                 button1.Enabled = false;
                 button2.Enabled = false;
                 this.AllowDrop = false;
-                MessageBox.Show("There was a problem connecting to the backend DB. \n\nYOU SHALL NOT PASS!!!\n\nDon't know what to tell ya....Jiggle the handle maybe?" + Environment.NewLine + Environment.NewLine + e.Message, "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                MessageBox.Show("There was a problem connecting to the backend DB. \n\nYOU SHALL NOT PASS!!!\n\nDon't know what to tell ya....Jiggle the handle maybe?\n\nCall my creator please." + Environment.NewLine + Environment.NewLine + e.Message, "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 if (System.Windows.Forms.Application.MessageLoop)
                 {
                     // Use this since we are a WinForms app
-                    System.Windows.Forms.Application.Exit();
+                    //System.Windows.Forms.Application.Exit();   //sjg-we dont want to exit cause we might need to update connection string
                 }
                 else
                 {
                     // Use this since we are a console app
-                    System.Environment.Exit(1);
+                    //System.Environment.Exit(1);   //sjg-we dont want to exit cause we might need to update connection string
                 }
             }
             finally
@@ -663,6 +663,42 @@ namespace COOP
             int count_good = 0;
             int count_bad = 0;
             int errors = 0;
+
+
+
+            //There is a bug where members that are taken off the Attendence DB are still in the lane's db since we don't 
+            //'zero' out everone before going in and updating hours.
+            //Code below will mark everone except visitor that is a working member (staff=6) to non member and put hours at -99
+            string sql2 = "UPDATE members SET staff=0,SSI=-99 WHERE NOT CardNo = 1;";
+
+            try
+            {
+                //create a command object that will be used to call the stored procedure
+                using (MySqlCommand cmd = new MySqlCommand(sql2, SQLCon))
+                {
+                    cmd.CommandType = CommandType.Text;
+                    //open the connection, run the stored procedure and close the connection
+                    //SQLCon.Open();
+                    int rows = cmd.ExecuteNonQuery();
+
+                    if (rows < 1)
+                    {
+                        MessageBox.Show("The Reset SQL for this program failed./nPlease contact my creator to fix this.");
+                    }
+
+
+
+                }
+            }
+            catch (Exception ex)
+            {
+
+                //there be errors 
+                errors++;
+            }
+
+
+
             //lets loop thru all the lists and mark good and bad members one at a time.....
             //this might take forever but it will be easier to recover from errors
             foreach (Member m in lstGoodList)
