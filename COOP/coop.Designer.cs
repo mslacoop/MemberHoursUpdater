@@ -46,5 +46,29 @@ namespace COOP {
                 this["DBConnection"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string Lane1DBConnction {
+            get {
+                return ((string)(this["Lane1DBConnction"]));
+            }
+            set {
+                this["Lane1DBConnction"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string Lane2DBConnction {
+            get {
+                return ((string)(this["Lane2DBConnction"]));
+            }
+            set {
+                this["Lane2DBConnction"] = value;
+            }
+        }
     }
 }

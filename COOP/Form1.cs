@@ -115,9 +115,28 @@ namespace COOP
             }
 
         }
+        public struct Product
+        {
+            private string upc;
+            private string desc;
 
+            public string sUPC
+            {
+                get { return upc; }
+                set { upc = value; }
+            }
+            public string sDesc
+            {
+                get { return desc; }
+                set { desc = value; }
+            }
+
+        }
         List<Member> lstGoodList;
         List<Member> lstBadList;
+
+
+        List<Product> lstProdList;
 
         static string[] Scopes = { DriveService.Scope.DriveReadonly };
         static string ApplicationName = "COOP-WinForm-App1";
@@ -134,6 +153,7 @@ namespace COOP
             button1.Enabled = false;
             sSecrect = "";
             button3.Visible = false;
+            lstProdList = new List<Product>();
 
             this.KeyPreview = true;
 
@@ -143,12 +163,19 @@ namespace COOP
             //this is just the default shit
             if (coop.Default.DBConnection.Length < 5)
                 coop.Default.DBConnection = "Server=192.168.0.100;Port=3306;Database=is4c_op;Uid=backend;Pwd=is4cbackend;default command timeout=7;";
+            if (coop.Default.Lane1DBConnction.Length < 5)
+                coop.Default.Lane1DBConnction = "Server=192.168.0.101;Port=3306;Database=opdata;Uid=backend;Pwd=is4cbackend;default command timeout=7;";
+            if (coop.Default.Lane2DBConnction.Length < 5)
+                coop.Default.Lane2DBConnction = "Server=192.168.0.102;Port=3306;Database=opdata;Uid=backend;Pwd=is4cbackend;default command timeout=7;";
+
 
             //sample connection string
             //myConnectionString="Server=myServerAddress;Port=1234;Database=testDB;Uid=root;Pwd=abc123;
             //dfault Mysql port is 3306
 
             tbConnectionString.Text = coop.Default.DBConnection;
+            tbLane1ConnectionString.Text = coop.Default.Lane1DBConnction;
+            tbLane2ConnectionString.Text = coop.Default.Lane2DBConnction;
 
             SQLCon = new MySqlConnection(tbConnectionString.Text);
 
@@ -642,6 +669,8 @@ namespace COOP
             {
                
                 tbConnectionString.Visible = true;
+                tbLane1ConnectionString.Visible = true;
+                tbLane2ConnectionString.Visible = true;
                 button3.Visible = true;
             }
 
@@ -664,8 +693,12 @@ namespace COOP
             int count_bad = 0;
             int errors = 0;
 
-
-
+            //Lets check the DB connection 1st
+            if(SQLCon != null && SQLCon.State != ConnectionState.Open)
+            {
+                label4.BackColor = label4.BackColor == Color.Red ? Color.Yellow : Color.Red;
+                return;
+            }
             //There is a bug where members that are taken off the Attendence DB are still in the lane's db since we don't 
             //'zero' out everone before going in and updating hours.
             //Code below will mark everone except visitor that is a working member (staff=6) to non member and put hours at -99
@@ -694,6 +727,8 @@ namespace COOP
             {
 
                 //there be errors 
+                MessageBox.Show("There was a problem but we will keep going." + Environment.NewLine + Environment.NewLine + ex.Message, "Update Error 1", MessageBoxButtons.OK);
+
                 errors++;
             }
 
@@ -720,11 +755,11 @@ namespace COOP
 
                             if (rows > 1)
                             {
-                                MessageBox.Show("Member number " + m.iID.ToString()+ " updated more then one person, \nplease check the attendence spreadsheet for errros.");
+                                MessageBox.Show("Member number " + m.iID.ToString()+ " updated more then one person, " + Environment.NewLine + "please check the attendence spreadsheet for errros.");
                             }
                             else if (rows < 1)
                             {
-                                MessageBox.Show("Member  " + m.sFirstName + " " + m.sLastName + " was not updated, \nplease check the attendence spreadsheet for errros.");
+                                MessageBox.Show("Member  " + m.sFirstName + " " + m.sLastName + " was not updated, " + Environment.NewLine + "please check the attendence spreadsheet for errros.");
                             }
                             else if (rows == 1)
                                 count_good++;
@@ -737,6 +772,7 @@ namespace COOP
                     {
 
                         //there be errors 
+                        MessageBox.Show("There was a problem but we will keep going." + Environment.NewLine + Environment.NewLine + ex.Message, "Update Error 2", MessageBoxButtons.OK);
                         errors++;
                     }
                     finally
@@ -745,7 +781,7 @@ namespace COOP
                     }
                 }
                 else
-                    MessageBox.Show("Member ID for " + m.sFirstName + " " + m.sLastName + " looks like it isn't a number, \nplease check the attendence spreadsheet.");
+                    MessageBox.Show("Member ID for " + m.sFirstName + " " + m.sLastName + " looks like it isn't a number, " + Environment.NewLine + "please check the attendence spreadsheet.");
 
             }
 
@@ -769,11 +805,11 @@ namespace COOP
 
                             if (rows > 1)
                             {
-                                MessageBox.Show("Member number " + m.iID.ToString() + " updated more then one person, \nplease check the attendence spreadsheet for errros.");
+                                MessageBox.Show("Member number " + m.iID.ToString() + " updated more then one person, " + Environment.NewLine + "please check the attendence spreadsheet for errros.");
                             }
                             else if (rows < 1)
                             {
-                                MessageBox.Show("Member  " + m.sFirstName + " " + m.sLastName + " was not updated, \nplease check the attendence spreadsheet for errros.");
+                                MessageBox.Show("Member  " + m.sFirstName + " " + m.sLastName + " was not updated, " + Environment.NewLine + "please check the attendence spreadsheet for errros.");
                             }
                             else if (rows == 1)
                                 count_bad++;
@@ -784,7 +820,7 @@ namespace COOP
                     catch (Exception ex)
                     {
 
-                        //there be errors 
+                        MessageBox.Show("There was a problem but we will keep going." + Environment.NewLine + Environment.NewLine + ex.Message, "Update Error 3", MessageBoxButtons.OK);
                         errors++;
                     }
                     finally
@@ -794,12 +830,12 @@ namespace COOP
 
                 }
                 else
-                    MessageBox.Show("Member ID for " + m.sFirstName + " " + m.sLastName + " looks like it isn't a number, \nplease check the attendence spreadsheet.");
+                    MessageBox.Show("Member ID for " + m.sFirstName + " " + m.sLastName + " looks like it isn't a number, " + Environment.NewLine + "please check the attendence spreadsheet.");
             }
             if (errors==0)
                 MessageBox.Show("You have updated the Member DB\n"+count_good.ToString()+"--good\n"+count_bad.ToString()+"--not good");
             else
-                MessageBox.Show("You have updated the Member DB with some errors.\n" + count_good.ToString() + "--good\n" + count_bad.ToString() + "--not good");
+                MessageBox.Show("You have updated the Member DB with some errors.\n" + count_good.ToString() + "--good" + Environment.NewLine + count_bad.ToString() + "--not good");
 
         }
 
@@ -808,6 +844,8 @@ namespace COOP
         private void button3_Click(object sender, EventArgs e)
         {
             coop.Default.DBConnection = tbConnectionString.Text;
+            coop.Default.Lane1DBConnction = tbLane1ConnectionString.Text;
+            coop.Default.Lane2DBConnction = tbLane2ConnectionString.Text;
             coop.Default.Save();
         }
 
@@ -816,9 +854,6 @@ namespace COOP
             if (SQLCon.State == ConnectionState.Open)
                 SQLCon.Close();
         }
-
-
- 
 
 
         private void Form1_Shown(object sender, EventArgs e)
@@ -945,6 +980,199 @@ namespace COOP
                 }
                 return;
             }
+        }
+
+        //check for products that are on the lanes but on in the backend anymore
+        private void checkForOrphanUPCToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //Lets check the DB connection 1st
+            if (SQLCon != null && SQLCon.State != ConnectionState.Open)
+            {
+                label4.BackColor = label4.BackColor == Color.Red ? Color.Yellow : Color.Red;
+                return;
+            }
+            
+
+            //download the Product list from the backend
+            using (MySqlCommand cmd = new MySqlCommand("SELECT products.upc, products.description From is4c_op.products WHERE products.inUse=1", SQLCon))
+            {
+                using (MySqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (!reader.Read())
+                    {
+                        //we have a problem, let the user know
+                    }
+                    while (reader.Read())
+                    {
+                        Product p = new Product();
+
+                        p.sUPC = reader.GetString("upc");
+                        p.sDesc = reader.GetString("description");
+
+                        lstProdList.Add(p);
+                    }
+
+                }
+            }
+
+            //lane 1
+            try
+            {
+                List<Product> lstLane1ProdList = new List<Product>();
+                // SQLCon = new MySqlConnection(tbConnectionString.Text);
+                //we have the products from the backend, now check the lanes
+                MySqlConnection conLane1 = new MySqlConnection(tbLane1ConnectionString.Text);
+                conLane1.Open();
+                if (conLane1 != null && conLane1.State != ConnectionState.Open)
+                {
+                    label4.BackColor = label4.BackColor == Color.Red ? Color.Yellow : Color.Red;
+                    return;
+                }
+                //read in the products from Lane1 and then go from there
+                using (MySqlCommand cmd =new MySqlCommand("SELECT products.upc, products.description From opdata.products WHERE products.inUse=1", conLane1))
+                {
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            //we have a problem, let the user know
+                        }
+                        while (reader.Read())
+                        {
+                            Product p = new Product();
+
+                            p.sUPC = reader.GetString("upc");
+                            p.sDesc = reader.GetString("description");
+
+                            lstLane1ProdList.Add(p);
+                        }
+                        //everything is read in.....lets check it out
+                        //this might be slow but it will work
+                        List<Product> lstOrphanProd= new List<Product>();
+                        foreach (Product p in lstLane1ProdList)
+                        {
+                            if(lstProdList.Contains(p)==false)
+                            {
+                                //p is not in the Product List from the backend
+                                lstOrphanProd.Add(p);
+                            }
+
+                        }
+                        if(lstOrphanProd.Count>0)
+                        {
+                            string lst = "";
+
+                            foreach(Product p in lstOrphanProd)
+                            {
+                                lst += p.sUPC + "-" + p.sDesc+"\n";
+                            }
+                            DialogResult r = MessageBox.Show("These items where found, click Yes to delete:" + Environment.NewLine  + lst, "Lane 1", MessageBoxButtons.YesNo);
+                            if(r == DialogResult.Yes)
+                            {
+                                //do the delete
+                                string sql;
+                                foreach(Product pq in lstOrphanProd)
+                                {
+                                    //sql = "DELETE FROM products where upc = " + pq.sUPC;
+                                    sql = "UPDATE products SET inUse=0 WHERE upc = " + pq.sUPC;
+                                    MySqlCommand cmdDel = new MySqlCommand(sql, conLane1);
+                                    int rows = cmdDel.ExecuteNonQuery();
+                                    if(rows==0)
+                                    {
+                                        MessageBox.Show("For some reason the delete didn't work for:" + Environment.NewLine  + pq.sDesc, "Delete Error");
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("There was a problem connecting to the Lane 1. " + Environment.NewLine + Environment.NewLine + ex.Message, "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+
+            }
+
+            //lane 2
+            try
+            {
+                List<Product> lstLane2ProdList = new List<Product>();
+                // SQLCon = new MySqlConnection(tbConnectionString.Text);
+                //we have the products from the backend, now check the lanes
+                MySqlConnection conLane2 = new MySqlConnection(tbLane2ConnectionString.Text);
+                conLane2.Open();
+                if (conLane2 != null && conLane2.State != ConnectionState.Open)
+                {
+                    label4.BackColor = label4.BackColor == Color.Red ? Color.Yellow : Color.Red;
+                    return;
+                }
+                using (MySqlCommand cmd = new MySqlCommand("SELECT products.upc, products.description From opdata.products WHERE products.inUse=1", SQLCon))
+                {
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            //we have a problem, let the user know
+                        }
+                        while (reader.Read())
+                        {
+                            Product p = new Product();
+
+                            p.sUPC = reader.GetString("upc");
+                            p.sDesc = reader.GetString("description");
+
+                            lstLane2ProdList.Add(p);
+                        }
+                        //everything is read in.....lets check it out
+                        //this might be slow but it will work
+                        List<Product> lstOrphanProd = new List<Product>();
+                        foreach (Product p in lstLane2ProdList)
+                        {
+                            if (lstProdList.Contains(p) == false)
+                            {
+                                //p is not in the Product List from the backend
+                                lstOrphanProd.Add(p);
+                            }
+
+                        }
+                        if (lstOrphanProd.Count > 0)
+                        {
+                            string lst = "";
+
+                            foreach (Product p in lstOrphanProd)
+                            {
+                                lst += p.sUPC + "-" + p.sDesc + "\n";
+                            }
+                            DialogResult r = MessageBox.Show("These items where found, click Yes to delete:\n" + lst, "Lane 2", MessageBoxButtons.YesNo);
+                            if (r == DialogResult.Yes)
+                            {
+                                //do the delete
+                                string sql;
+                                foreach (Product pq in lstOrphanProd)
+                                {
+                                    //sql = "DELETE FROM products where upc = " + pq.sUPC;
+                                    sql = "UPDATE products SET inUse=0 WHERE upc = " + pq.sUPC;
+
+                                    MySqlCommand cmdDel = new MySqlCommand(sql, conLane2);
+                                    int rows = cmdDel.ExecuteNonQuery();
+                                    if (rows == 0)
+                                    {
+                                        MessageBox.Show("For some reason the delete didn't work for:" + Environment.NewLine  + pq.sDesc, "Delete Error");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("There was a problem connecting to the Lane 2. " + Environment.NewLine + Environment.NewLine + ex.Message, "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+
+            }
+
         }
     }
 }
