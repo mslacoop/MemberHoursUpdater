@@ -164,9 +164,9 @@ namespace COOP
             if (coop.Default.DBConnection.Length < 5)
                 coop.Default.DBConnection = "Server=192.168.0.100;Port=3306;Database=is4c_op;Uid=backend;Pwd=is4cbackend;default command timeout=7;";
             if (coop.Default.Lane1DBConnction.Length < 5)
-                coop.Default.Lane1DBConnction = "Server=192.168.0.101;Port=3306;Database=opdata;Uid=backend;Pwd=is4cbackend;default command timeout=7;";
+                coop.Default.Lane1DBConnction = "Server=192.168.0.101;Port=3306;Database=opdata;Uid=is4clane;Pwd=is4clane;default command timeout=7;";
             if (coop.Default.Lane2DBConnction.Length < 5)
-                coop.Default.Lane2DBConnction = "Server=192.168.0.102;Port=3306;Database=opdata;Uid=backend;Pwd=is4cbackend;default command timeout=7;";
+                coop.Default.Lane2DBConnction = "Server=192.168.0.102;Port=3306;Database=opdata;Uid=is4clane;Pwd=is4clane;default command timeout=7;";
 
 
             //sample connection string
@@ -991,8 +991,9 @@ namespace COOP
                 label4.BackColor = label4.BackColor == Color.Red ? Color.Yellow : Color.Red;
                 return;
             }
-            
 
+            MessageBox.Show("This takes some time, so let it run until \nyou see another message box or we crash.", "Give it some time");
+            Cursor.Current = Cursors.WaitCursor;
             //download the Product list from the backend
             using (MySqlCommand cmd = new MySqlCommand("SELECT products.upc, products.description From is4c_op.products WHERE products.inUse=1", SQLCon))
             {
@@ -1026,6 +1027,7 @@ namespace COOP
                 if (conLane1 != null && conLane1.State != ConnectionState.Open)
                 {
                     label4.BackColor = label4.BackColor == Color.Red ? Color.Yellow : Color.Red;
+                    Cursor.Current = Cursors.Default;
                     return;
                 }
                 //read in the products from Lane1 and then go from there
@@ -1046,6 +1048,7 @@ namespace COOP
 
                             lstLane1ProdList.Add(p);
                         }
+                        reader.Close();
                         //everything is read in.....lets check it out
                         //this might be slow but it will work
                         List<Product> lstOrphanProd= new List<Product>();
@@ -1074,7 +1077,7 @@ namespace COOP
                                 foreach(Product pq in lstOrphanProd)
                                 {
                                     //sql = "DELETE FROM products where upc = " + pq.sUPC;
-                                    sql = "UPDATE products SET inUse=0 WHERE upc = " + pq.sUPC;
+                                    sql = "UPDATE products SET inUse=-1 WHERE upc = " + pq.sUPC;
                                     MySqlCommand cmdDel = new MySqlCommand(sql, conLane1);
                                     int rows = cmdDel.ExecuteNonQuery();
                                     if(rows==0)
@@ -1092,7 +1095,6 @@ namespace COOP
             catch (Exception ex)
             {
                 MessageBox.Show("There was a problem connecting to the Lane 1. " + Environment.NewLine + Environment.NewLine + ex.Message, "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-
             }
 
             //lane 2
@@ -1106,9 +1108,11 @@ namespace COOP
                 if (conLane2 != null && conLane2.State != ConnectionState.Open)
                 {
                     label4.BackColor = label4.BackColor == Color.Red ? Color.Yellow : Color.Red;
+                    Cursor.Current = Cursors.Default;
+
                     return;
                 }
-                using (MySqlCommand cmd = new MySqlCommand("SELECT products.upc, products.description From opdata.products WHERE products.inUse=1", SQLCon))
+                using (MySqlCommand cmd = new MySqlCommand("SELECT products.upc, products.description From opdata.products WHERE products.inUse=1", conLane2))
                 {
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
@@ -1125,6 +1129,7 @@ namespace COOP
 
                             lstLane2ProdList.Add(p);
                         }
+                        reader.Close();
                         //everything is read in.....lets check it out
                         //this might be slow but it will work
                         List<Product> lstOrphanProd = new List<Product>();
@@ -1153,7 +1158,7 @@ namespace COOP
                                 foreach (Product pq in lstOrphanProd)
                                 {
                                     //sql = "DELETE FROM products where upc = " + pq.sUPC;
-                                    sql = "UPDATE products SET inUse=0 WHERE upc = " + pq.sUPC;
+                                    sql = "UPDATE products SET inUse=-1 WHERE upc = " + pq.sUPC;
 
                                     MySqlCommand cmdDel = new MySqlCommand(sql, conLane2);
                                     int rows = cmdDel.ExecuteNonQuery();
@@ -1172,6 +1177,8 @@ namespace COOP
                 MessageBox.Show("There was a problem connecting to the Lane 2. " + Environment.NewLine + Environment.NewLine + ex.Message, "DB Connection Issues", MessageBoxButtons.OK, MessageBoxIcon.Stop);
 
             }
+            MessageBox.Show("Finished removing items that don't exist in the backend from the lanes.\n\n", "Finished");
+            Cursor.Current = Cursors.Default;
 
         }
     }
